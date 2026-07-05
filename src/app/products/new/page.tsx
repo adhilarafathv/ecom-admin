@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
+import { Upload } from 'lucide-react'
 
 export default function NewProductPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -19,11 +21,16 @@ export default function NewProductPage() {
     sizes: '',
     colors: '',
     stock: '',
-    imageUrl: '',
   })
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.id]: e.target.value }))
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setImageFile(e.target.files[0])
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,6 +40,28 @@ export default function NewProductPage() {
     try {
       const supabase = createClient()
       
+      let imageUrl = ''
+      
+      // 1. Upload image if provided
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
+        
+        const { error: uploadError, data: uploadData } = await supabase.storage
+          .from('products')
+          .upload(fileName, imageFile)
+          
+        if (uploadError) throw new Error(`Image Upload Failed: ${uploadError.message}`)
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('products')
+          .getPublicUrl(fileName)
+          
+        imageUrl = publicUrl
+      }
+
+      // 2. Insert Product
       const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
 
       const { error } = await supabase.from('products').insert({
@@ -44,7 +73,7 @@ export default function NewProductPage() {
         sizes: formData.sizes.split(',').map(s => s.trim()).filter(Boolean),
         colors: formData.colors.split(',').map(c => c.trim()).filter(Boolean),
         stock: parseInt(formData.stock),
-        images: formData.imageUrl ? [formData.imageUrl] : [],
+        images: imageUrl ? [imageUrl] : [],
       })
 
       if (error) throw error
@@ -123,11 +152,18 @@ export default function NewProductPage() {
 
         <Card>
           <CardContent className="p-6 space-y-4">
-            <h2 className="text-xl font-semibold mb-4">Images</h2>
+            <h2 className="text-xl font-semibold mb-4">Product Image</h2>
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input id="imageUrl" value={formData.imageUrl} onChange={handleChange} placeholder="https://example.com/image.jpg" />
-              <p className="text-xs text-muted-foreground">For now, just paste a direct link to an image.</p>
+              <Label htmlFor="imageFile">Upload Image</Label>
+              <Input 
+                id="imageFile" 
+                type="file" 
+                accept="image/*"
+                onChange={handleFileChange} 
+                required 
+                className="cursor-pointer"
+              />
+              <p className="text-xs text-muted-foreground">Select an image file from your computer.</p>
             </div>
           </CardContent>
         </Card>
