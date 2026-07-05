@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Table,
   TableBody,
@@ -16,21 +16,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-const mockOrders = [
-  { id: '1001', customer: 'John Doe', phone: '9876543210', total: 1299, date: '2026-07-04', status: 'Pending' },
-  { id: '1002', customer: 'Jane Smith', phone: '9876543211', total: 2499, date: '2026-07-03', status: 'Packed' },
-  { id: '1003', customer: 'Alice Johnson', phone: '9876543212', total: 599, date: '2026-07-02', status: 'Delivered' },
-]
+import { createClient } from '@/lib/supabase/client'
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState(mockOrders)
+  const [orders, setOrders] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const handleStatusChange = (orderId: string, newStatus: string) => {
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  const fetchOrders = async () => {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (data) {
+      setOrders(data)
+    } else if (error) {
+      console.error(error)
+    }
+    setIsLoading(false)
+  }
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    const supabase = createClient()
+    
+    // Optimistic update
     setOrders(orders.map(order => 
       order.id === orderId ? { ...order, status: newStatus } : order
     ))
-    // In a real app, this would make an API call to update Supabase
+
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId)
+
+    if (error) {
+      console.error('Error updating status:', error)
+      alert('Failed to update order status.')
+      fetchOrders() // Revert on failure
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -64,39 +92,57 @@ export default function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell className="font-medium">#{order.id}</TableCell>
-                <TableCell>{order.date}</TableCell>
-                <TableCell>
-                  <p className="font-medium">{order.customer}</p>
-                  <p className="text-sm text-muted-foreground">{order.phone}</p>
-                </TableCell>
-                <TableCell>₹{order.total}</TableCell>
-                <TableCell>
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusColor(order.status)}`}>
-                    {order.status}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Select 
-                    defaultValue={order.status} 
-                    onValueChange={(val) => handleStatusChange(order.id, val)}
-                  >
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Confirmed">Confirmed</SelectItem>
-                      <SelectItem value="Packed">Packed</SelectItem>
-                      <SelectItem value="Delivered">Delivered</SelectItem>
-                      <SelectItem value="Cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Loading orders...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : orders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  No orders found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              orders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">
+                    <span className="truncate max-w-[100px] block" title={order.id}>
+                      #{order.id.split('-')[0]}
+                    </span>
+                  </TableCell>
+                  <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <p className="font-medium">{order.customer_name}</p>
+                    <p className="text-sm text-muted-foreground">{order.phone}</p>
+                  </TableCell>
+                  <TableCell>₹{order.total}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusColor(order.status)}`}>
+                      {order.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Select 
+                      defaultValue={order.status} 
+                      onValueChange={(val) => handleStatusChange(order.id, val)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Confirmed">Confirmed</SelectItem>
+                        <SelectItem value="Packed">Packed</SelectItem>
+                        <SelectItem value="Delivered">Delivered</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

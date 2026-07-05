@@ -42,7 +42,7 @@ export default function LoginPage() {
           <p className="text-muted-foreground text-sm mt-2">Sign in to manage your store</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" suppressHydrationWarning>
           {error && (
             <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
               {error}
@@ -58,6 +58,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@example.com" 
+              suppressHydrationWarning
             />
           </div>
           
@@ -69,10 +70,11 @@ export default function LoginPage() {
               required 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              suppressHydrationWarning
             />
           </div>
 
-          <Button type="submit" className="w-full mt-4" disabled={isLoading}>
+          <Button type="submit" className="w-full mt-4" disabled={isLoading} suppressHydrationWarning>
             {isLoading ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
