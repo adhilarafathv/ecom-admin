@@ -43,7 +43,14 @@ export default function ProductsPage() {
     const supabase = createClient()
     const { error } = await supabase.from('products').delete().eq('id', id)
     
-    if (!error) {
+    if (error) {
+      console.error('Delete product error:', error)
+      if (error.code === '23503') {
+        alert('Cannot delete this product because it is referenced in one or more orders.')
+      } else {
+        alert(`Failed to delete product: ${error.message}`)
+      }
+    } else {
       setProducts(products.filter(p => p.id !== id))
     }
   }
