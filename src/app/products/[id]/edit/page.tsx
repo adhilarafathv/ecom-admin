@@ -128,10 +128,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Edit Product</h1>
-        <p className="text-muted-foreground mt-1">Update the details for this product</p>
+    <div className="p-4 md:p-8 max-w-4xl">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Edit Product</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Update the details for this product</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -154,7 +154,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price">Price (₹)</Label>
                 <Input id="price" value={formData.price} onChange={handleChange} type="number" min="0" placeholder="0.00" required />
@@ -214,7 +214,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3">
           <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? 'Saving...' : 'Save Changes'}
